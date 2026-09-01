@@ -5,7 +5,6 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
-import hashlib
 import time
 
 # Load environment variables from .env file
@@ -56,10 +55,6 @@ def get_document_text(source) -> str:
         return ""
 
     return document_text
-
-def create_document_id(source: str) -> str:
-    """Creates a stable SHA256 hash of the URL to use as a document ID."""
-    return hashlib.sha256(source.encode()).hexdigest()
 
 def split_text_into_chunks(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
     """
@@ -161,29 +156,3 @@ def index_chunks_in_pinecone(chunks: list[str], embeddings: list, index_name: st
         
     except Exception as e:
         print(f"Error indexing in Pinecone: {e}")
-        
-if __name__ == "__main__":
-    sample_url = "https://example.com/sample-policy.pdf"
-    index_name = "policy-index"
-
-    document_content = get_document_text(sample_url)
-    
-    if document_content:
-        chunks = split_text_into_chunks(document_content)
-        print(f"\n--- Document Split into {len(chunks)} Chunks ---")
-        
-        embeddings = generate_embeddings(chunks)
-
-        if embeddings:
-            print(f"Generated {len(embeddings)} embeddings.")
-            print(f"Size of each embedding vector: {len(embeddings[0])}")
-
-            # Index the chunks in Pinecone
-            print("--- Running standalone script test ---")
-            test_namespace = create_document_id(sample_url) # Use the new function!
-            index_chunks_in_pinecone(chunks, embeddings, index_name, namespace=test_namespace)
-        else:
-            print("Failed to generate embeddings. Pinecone indexing skipped.")
-
-    else:
-        print("Failed to process document content.")
