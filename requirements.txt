@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-requests
-PyMuPDF
-google-generativeai
-pinecone
-python-dotenv

@@ -1,3 +1,24 @@
+# Keep API keys and other local settings out of Git.
 .env
+.env.*
+# Share the example file so others know which settings they need.
+!.env.example
+
+# Python environments contain installed packages, not project code.
+.venv/
 venv/
+
+# Python and pytest create these files automatically.
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Frontend packages and generated build files.
+node_modules/
+dist/
+dist-ssr/
+
+# Logs from local development.
+*.log

@@ -1,26 +1,13 @@
-// src/components/App.js
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ChatWindow from './ChatWindow.jsx';
-import '../App.css'; // This will link to your main stylesheet
+import '../App.css';
 
-const App = () => {
-    // We only need to manage the current chat state now
-    const [currentChat, setCurrentChat] = useState(null);
-
-    // This function will be called to start a new chat, clearing the old one
-    const startNewChat = () => {
-        setCurrentChat(null);
-    };
+export default function App() {
+    const [chat, setChat] = useState(null);
 
     return (
         <div className="app-container">
-            <ChatWindow 
-                currentChat={currentChat} 
-                setCurrentChat={setCurrentChat}
-                startNewChat={startNewChat}
-            />
+            <ChatWindow chat={chat} setChat={setChat} onNewChat={() => setChat(null)} />
         </div>
     );
-};
-
-export default App;
+}

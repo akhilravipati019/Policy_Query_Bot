@@ -1,107 +1,95 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-const ChatWindow = ({ currentChat, setCurrentChat, startNewChat }) => {
+const endpoint = import.meta.env.VITE_REACT_APP_API_URL_ENDPOINT;
+const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
+
+export default function ChatWindow({ chat, setChat, onNewChat }) {
     const [pdfFile, setPdfFile] = useState(null);
     const [question, setQuestion] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const API_URL_ENDPOINT = import.meta.env.VITE_REACT_APP_API_URL_ENDPOINT;
-    const API_KEY = import.meta.env.VITE_REACT_APP_API_KEY;
+    async function submitQuestion(event) {
+        event.preventDefault();
+        const trimmedQuestion = question.trim();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // Validate the form inputs
         if (!pdfFile) {
-            alert("Please select a PDF file.");
+            alert('Please select a PDF file.');
             return;
         }
-        if (!question.trim()) {
-            alert("Please enter a question before sending.");
+        if (!trimmedQuestion) {
+            alert('Please enter a question.');
             return;
         }
 
+        const form = new FormData();
+        form.append('file', pdfFile);
+        form.append('question', trimmedQuestion);
         setIsLoading(true);
-
-        const endpoint = API_URL_ENDPOINT;
-        const headers = {
-            'Authorization': `Bearer ${API_KEY}`,
-        };
-        const body = new FormData();
-        body.append('file', pdfFile);
-        body.append('question', question);
 
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers,
-                body,
+                headers: { Authorization: `Bearer ${apiKey}` },
+                body: form,
             });
-
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error('Failed to fetch response from backend.');
+                throw new Error(data.detail || 'The server could not answer the question.');
             }
 
-            const data = await response.json();
-            const newAnswer = data.answers[0];
-            const chatMessage = { sender: 'user', text: question };
-            const botMessage = { sender: 'bot', text: newAnswer };
-
-            setCurrentChat(prevChat => ({
-                id: prevChat ? prevChat.id : uuidv4(),
-                messages: [...(prevChat?.messages || []), chatMessage, botMessage],
-                pdfIdentifier: prevChat?.pdfIdentifier || pdfFile.name,
+            setChat((previousChat) => ({
+                id: previousChat?.id || uuidv4(),
+                pdfIdentifier: previousChat?.pdfIdentifier || pdfFile.name,
+                messages: [
+                    ...(previousChat?.messages || []),
+                    { sender: 'user', text: trimmedQuestion },
+                    { sender: 'bot', text: data.answers?.[0] || 'No answer was returned.' },
+                ],
             }));
-
             setQuestion('');
         } catch (error) {
-            console.error('Error:', error);
+            alert(error.message);
         } finally {
             setIsLoading(false);
         }
-    };
-    
-    const chatInProgress = currentChat && currentChat.messages.length > 0;
+    }
+
+    const hasMessages = Boolean(chat?.messages?.length);
 
     return (
         <div className="chat-window">
             <div className="header">
-                <button onClick={startNewChat} className="new-chat-btn">
-                    + New Chat
-                </button>
+                <button onClick={onNewChat} className="new-chat-btn">+ New Chat</button>
             </div>
             <div className="messages">
-                {currentChat && currentChat.messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.sender}`}>
-                        {msg.text}
+                {chat?.messages.map((message, index) => (
+                    <div key={index} className={`message ${message.sender}`}>
+                        {message.text}
                     </div>
                 ))}
-                {isLoading && <div className="message bot">Loading...</div>}
+                {isLoading && <div className="message bot">Reading the policy...</div>}
             </div>
-            
-            <form onSubmit={handleSubmit} className="input-form">
-                <label className={`file-attach${chatInProgress ? ' disabled' : ''}`}>
+            <form onSubmit={submitQuestion} className="input-form">
+                <label className={`file-attach${hasMessages ? ' disabled' : ''}`}>
                     📎
                     <input
                         type="file"
                         accept="application/pdf"
-                        onChange={(e) => setPdfFile(e.target.files[0])}
-                        disabled={chatInProgress}
+                        disabled={hasMessages}
+                        onChange={(event) => setPdfFile(event.target.files?.[0] || null)}
                     />
                 </label>
                 {pdfFile && <span className="file-name" title={pdfFile.name}>{pdfFile.name}</span>}
                 <input
-                    type="text"
                     className="question-input"
+                    type="text"
                     placeholder="Ask a question..."
                     value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
+                    onChange={(event) => setQuestion(event.target.value)}
                 />
                 <button type="submit" disabled={isLoading}>Send</button>
             </form>
         </div>
     );
-};
-
-export default ChatWindow;
+}
